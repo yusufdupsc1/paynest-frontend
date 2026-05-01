@@ -10,8 +10,88 @@ import type {
   RefundStats,
 } from '@/types/api';
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+const API_URL_ENV = process.env.NEXT_PUBLIC_API_URL?.trim();
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+const DEV_FALLBACK_API_URL = 'http://localhost:3000';
 const API_PREFIX = '/api/v1';
+
+export interface ApiDiagnostics {
+  baseUrl: string;
+  configured: boolean;
+  isProduction: boolean;
+  issue: string | null;
+}
+
+const apiUrlIssue = getApiUrlIssue(API_URL_ENV);
+export const API_BASE_URL = apiUrlIssue ? '' : API_URL_ENV || DEV_FALLBACK_API_URL;
+let diagnosticsLogged = false;
+
+export function getApiDiagnostics(): ApiDiagnostics {
+  return {
+    baseUrl: API_BASE_URL || '(not configured)',
+    configured: Boolean(API_URL_ENV),
+    isProduction: IS_PRODUCTION,
+    issue: apiUrlIssue,
+  };
+}
+
+export function logApiDiagnostics(): void {
+  if (diagnosticsLogged || typeof window === 'undefined') {
+    return;
+  }
+
+  diagnosticsLogged = true;
+  const diagnostics = getApiDiagnostics();
+  const message = `[PayNest] API base URL: ${diagnostics.baseUrl}`;
+
+  if (diagnostics.issue) {
+    console.error(`${message}. ${diagnostics.issue} Set NEXT_PUBLIC_API_URL to https://<service>.onrender.com in Vercel and redeploy.`);
+    return;
+  }
+
+  console.info(message);
+}
+
+export function getApiConfigIssue(): string | null {
+  return apiUrlIssue;
+}
+
+function getApiUrlIssue(value: string | undefined): string | null {
+  if (!IS_PRODUCTION) {
+    return null;
+  }
+
+  if (!value) {
+    return 'NEXT_PUBLIC_API_URL is missing for this production build.';
+  }
+
+  try {
+    const url = new URL(value);
+    if (!['https:', 'http:'].includes(url.protocol)) {
+      return 'NEXT_PUBLIC_API_URL must be an absolute http(s) URL.';
+    }
+
+    if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
+      return 'NEXT_PUBLIC_API_URL points to localhost in a production build.';
+    }
+
+    if (url.protocol !== 'https:') {
+      return 'NEXT_PUBLIC_API_URL must use https in production.';
+    }
+  } catch {
+    return 'NEXT_PUBLIC_API_URL must be a valid absolute URL.';
+  }
+
+  return null;
+}
+
+function assertApiConfigured(): void {
+  if (!apiUrlIssue) {
+    return;
+  }
+
+  throw new ApiError(0, `${apiUrlIssue} Set NEXT_PUBLIC_API_URL to https://<service>.onrender.com in Vercel and redeploy.`);
+}
 
 // Token storage — matches the old localStorage pattern for the demo
 const TOKEN_KEY = 'paynest-jwt-token';
@@ -49,6 +129,7 @@ async function apiFetch<T>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> {
+  assertApiConfigured();
   const token = getToken();
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -59,7 +140,7 @@ async function apiFetch<T>(
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const res = await fetch(`${BASE_URL}${API_PREFIX}${path}`, {
+  const res = await fetch(`${API_BASE_URL}${API_PREFIX}${path}`, {
     ...options,
     headers,
   });
@@ -74,7 +155,8 @@ async function apiFetch<T>(
 
 // Health endpoint is excluded from API prefix
 async function healthFetch<T>(path: string): Promise<T> {
-  const res = await fetch(`${BASE_URL}${path}`);
+  assertApiConfigured();
+  const res = await fetch(`${API_BASE_URL}${path}`);
   if (!res.ok) throw new ApiError(res.status, res.statusText);
   return res.json();
 }

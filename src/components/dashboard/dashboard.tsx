@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/lib/auth-context';
-import { transactionsApi, analyticsApi, refundsApi, webhooksApi, healthApi } from '@/lib/api';
+import { transactionsApi, analyticsApi, refundsApi, webhooksApi, healthApi, getApiDiagnostics } from '@/lib/api';
 import type { Transaction, WebhookEvent, AnalyticsSummary, AnalyticsTrend, HealthResponse, Refund, RefundStats } from '@/types/api';
 
 type View = 'overview' | 'transactions' | 'webhooks' | 'refunds' | 'analytics';
@@ -196,6 +196,8 @@ function OverviewView({
         </div>
       )}
 
+      <ApiDiagnosticsCard health={health} />
+
       {/* Recent transactions */}
       <div className="rounded-2xl border border-slate-200 bg-white p-6">
         <p className="text-sm font-medium text-slate-950">Recent Transactions</p>
@@ -223,6 +225,29 @@ function OverviewView({
             </tbody>
           </table>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function ApiDiagnosticsCard({ health }: { health: HealthResponse | null }) {
+  const diagnostics = getApiDiagnostics();
+  const connected = health?.status === 'ok';
+
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-6">
+      <p className="text-sm font-medium text-slate-950">API Diagnostics</p>
+      <div className="mt-4 grid gap-4 md:grid-cols-[1fr_auto] md:items-center">
+        <div>
+          <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Base URL</p>
+          <p className="mt-1 break-all font-mono text-sm text-slate-700">{diagnostics.baseUrl}</p>
+          {diagnostics.issue && <p className="mt-2 text-sm text-amber-700">{diagnostics.issue}</p>}
+        </div>
+        <span className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${
+          connected ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+        }`}>
+          {connected ? 'Connected' : 'Not connected'}
+        </span>
       </div>
     </div>
   );
