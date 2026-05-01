@@ -289,6 +289,40 @@ function TransactionsView({ transactions }: { transactions: Transaction[] }) {
 }
 
 function WebhooksView({ webhooks }: { webhooks: WebhookEvent[] }) {
+  // Format timestamp for better readability
+  const formatTimestamp = (timestamp: string): string => {
+    try {
+      return new Date(timestamp).toLocaleString(undefined, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch {
+      return timestamp;
+    }
+  };
+
+  // Format event type for better display
+  const formatEventType = (eventType: string | null): string => {
+    if (!eventType) return '-';
+    // Make Stripe events more readable
+    if (eventType.startsWith('checkout.session')) {
+      return eventType.replace('checkout.session.', 'Checkout Session: ');
+    }
+    if (eventType.startsWith('payment_intent')) {
+      return eventType.replace('payment_intent.', 'Payment Intent: ');
+    }
+    if (eventType.startsWith('charge')) {
+      return eventType.replace('charge.', 'Charge: ');
+    }
+    if (eventType.startsWith('customer.subscription')) {
+      return eventType.replace('customer.subscription.', 'Subscription: ');
+    }
+    return eventType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  };
+
   return (
     <div>
       <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">Webhooks</p>
@@ -307,12 +341,13 @@ function WebhooksView({ webhooks }: { webhooks: WebhookEvent[] }) {
           <tbody>
             {webhooks.map((wh) => (
               <tr key={wh.id} className="border-b border-slate-100">
-                <td className="p-4 font-mono text-xs">{wh.eventType ?? '-'}</td>
+                <td className="p-4 font-mono text-xs">{formatEventType(wh.eventType)}</td>
                 <td className="p-4 capitalize">{wh.gateway}</td>
                 <td className="p-4">
                   <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
                     wh.status === 'processed' ? 'bg-emerald-100 text-emerald-800' :
                     wh.status === 'failed' ? 'bg-rose-100 text-rose-800' :
+                    wh.status === 'processing' ? 'bg-amber-100 text-amber-800' :
                     'bg-slate-100 text-slate-800'
                   }`}>
                     {wh.status}
@@ -322,16 +357,40 @@ function WebhooksView({ webhooks }: { webhooks: WebhookEvent[] }) {
                   <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
                     wh.signatureStatus === 'valid' ? 'bg-emerald-100 text-emerald-800' :
                     wh.signatureStatus === 'invalid' ? 'bg-rose-100 text-rose-800' :
+                    wh.signatureStatus === 'not_applicable' ? 'bg-slate-100 text-slate-800' :
                     'bg-amber-100 text-amber-800'
                   }`}>
                     {wh.signatureStatus}
                   </span>
                 </td>
-                <td className="p-4 text-slate-500">{new Date(wh.receivedAt).toLocaleString()}</td>
+                <td className="p-4 text-slate-500">{formatTimestamp(wh.receivedAt)}</td>
               </tr>
             ))}
           </tbody>
         </table>
+        
+        {/* Stripe-specific webhook summary */}
+        <div className="mt-6 p-4 bg-slate-50 rounded-xl">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 mb-2">Stripe Webhook Summary</p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <div className="text-sm">
+              <p className="text-slate-500">Total Stripe Events:</p>
+              <p className="font-medium text-slate-900">{webhooks.filter(wh => wh.gateway === 'stripe').length}</p>
+            </div>
+            <div className="text-sm">
+              <p className="text-slate-500">Processed Stripe Events:</p>
+              <p className="font-medium text-slate-900">{webhooks.filter(wh => wh.gateway === 'stripe' && wh.status === 'processed').length}</p>
+            </div>
+            <div className="text-sm">
+              <p className="text-slate-500">Failed Stripe Events:</p>
+              <p className="font-medium text-slate-900">{webhooks.filter(wh => wh.gateway === 'stripe' && wh.status === 'failed').length}</p>
+            </div>
+            <div className="text-sm">
+              <p className="text-slate-500">Invalid Signatures:</p>
+              <p className="font-medium text-slate-900">{webhooks.filter(wh => wh.gateway === 'stripe' && wh.signatureStatus === 'invalid').length}</p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
