@@ -1,0 +1,15 @@
+# Build outputs and generated assets
+.next/
+out/
+build/
+dist/
+coverage/
+
+# Dependencies and caches
+node_modules/
+.cache/
+.turbo/
+
+# Generated framework files
+next-env.d.ts
+*.tsbuildinfo

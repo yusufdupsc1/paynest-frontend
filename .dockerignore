@@ -1,0 +1,84 @@
+# Version control and repository metadata
+.git/
+.gitignore
+.gitattributes
+
+# Dependency directories and package-manager caches
+node_modules/
+.pnp/
+.pnp.*
+.yarn/cache/
+.npm/
+.pnpm-store/
+
+# Build outputs and local caches
+.next/
+out/
+build/
+dist/
+coverage/
+.turbo/
+.parcel-cache/
+.cache/
+.eslintcache
+.vercel/
+*.tsbuildinfo
+
+# Local environment, secrets, and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.cert
+*.csr
+secrets.json
+secrets.*.json
+credentials.json
+credentials.*.json
+*-credentials.json
+service-account*.json
+
+# Tests, reports, and local diagnostics
+__tests__/
+test/
+tests/
+*.test.*
+*.spec.*
+playwright-report/
+test-results/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Documentation and non-runtime project files
+README.md
+CHANGELOG.md
+docs/
+.editorconfig
+
+# OS files and editor metadata
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Docker artifacts not required inside the build context
+Dockerfile*
+.dockerignore

@@ -3,15 +3,15 @@ FROM node:20-alpine AS base
 # Install dependencies
 FROM base AS deps
 WORKDIR /app
-COPY package.json bun.lock* ./
-RUN npm install
+COPY package.json package-lock.json ./
+RUN npm ci
 
 # Build
 FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-RUN npm run build
+RUN mkdir -p public && npm run build
 
 # Production
 FROM base AS runner
